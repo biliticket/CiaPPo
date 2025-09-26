@@ -63,10 +63,15 @@ headers = {
     "mobileSource": "android",
 }
 
+eventMainId = questionary.text("Event Main Id:", default="5456").ask()
+if eventMainId is None:
+    logger.error("Event main id is None")
+    os._exit(0)
+
 ticketTypes = session.get(
     "https://www.allcpp.cn/allcpp/ticket/getTicketTypeList.do",
     params={
-        "eventMainId": "5456",
+        "eventMainId": eventMainId,
         "ticketMainId": "0",
         "appVersion": "3.25.2",
         "deviceVersion": "35",
