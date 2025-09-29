@@ -229,10 +229,13 @@ while True:
               json={
                   "app": "ciappo",
                   "version": VERSION,
-                  "count": count,
-                  "purchaserIds": purchaserIds,
-                  "ticketTypeId": ticketTypeId,
-                  "eventMainId": eventMainId
+                  "type": "ordered",
+                  "data": {
+                    "count": count,
+                    "purchaserIds": purchaserIds,
+                    "ticketTypeId": ticketTypeId,
+                    "eventMainId": eventMainId
+                  }
               },
               timeout=1,
             )
