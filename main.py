@@ -8,13 +8,15 @@ import questionary
 # import sentry_sdk
 from loguru import logger
 
+VERSION = "v1.0.1"
+
 print(r"""   ______    _             ____     ____        
   / ____/   (_)  ____ _   / __ \   / __ \  ____ 
  / /       / /  / __ `/  / /_/ /  / /_/ / / __ \
 / /___    / /  / /_/ /  / ____/  / ____/ / /_/ /
 \____/   /_/   \__,_/  /_/      /_/      \____/ 
                                                 
-CiaPPo～(∠・ω< )⌒☆ v1.0.1""")
+CiaPPo～(∠・ω< )⌒☆ """+VERSION)
 
 while True:
     loginType = questionary.select(
@@ -180,6 +182,7 @@ while True:
         sign_resp = session.post(
             "https://sign.rakuyoudesu.com/",
             json={
+                "source": "ciappo",
                 "purchaser": purchaser,
                 "purchaserIds": purchaserIds,
                 "ticketTypeId": ticketTypeId,
@@ -224,6 +227,8 @@ while True:
             session.post(
               f"https://report.rakuyoudesu.com/report",
               json={
+                  "app": "ciappo",
+                  "version": VERSION,
                   "count": count,
                   "purchaserIds": purchaserIds,
                   "ticketTypeId": ticketTypeId,
