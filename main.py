@@ -2,6 +2,9 @@ import os
 import random
 import time
 import requests
+from urllib.parse import quote
+from utils.Ask import Ask 
+from utils.BarkUtil import sendBark
 session = requests.Session()
 
 import questionary
@@ -16,6 +19,8 @@ print(r"""   ______    _             ____     ____
                                                 
 CiaPPo～(∠・ω< )⌒☆ v1.0.0""")
 
+ask = Ask()
+
 while True:
     loginType = questionary.select(
         "Login Type:",
@@ -28,6 +33,7 @@ while True:
         logger.error("Login type is None")
         continue
     if loginType.startswith("2"):
+        username = 'Token用户'
         token = questionary.text("Token:").ask()
         logger.info(f"Using token: {token}")
         break
@@ -48,6 +54,10 @@ while True:
         token = resp["token"]
         logger.info(f"Login successful, token: {token}")
         break
+
+barkKey = None
+if ask.prompt_yesNo("是否配置Bark推送？"):
+    barkKey = ask.prompt_text("请输入key(多个以,分割)")
 
 deviceId = "".join(
     random.choices("abcdefghijklmnopqrstuvwxyz0123456789", k=32)
@@ -107,6 +117,7 @@ if ticketType is None:
 
 ticketTypeId = ticketType["id"]
 ticketTypeName = ticketType["ticketName"]
+ticketPrice = ticketType['ticketPrice'] / 100
 
 logger.info(f"Selected Ticket Type: {ticketTypeId} {ticketTypeName}")
 
@@ -220,6 +231,8 @@ while True:
         logger.debug(resp)
         if resp["isSuccess"]:
             logger.success("Success")
+            if barkKey:
+                sendBark(barkKey,f"[{username}] → {purchaserNames}",count,ticketPrice,ticketTypeName)
             break
         else:
             logger.info(f"Failed, {resp['message']}")
