@@ -14,7 +14,7 @@ print(r"""   ______    _             ____     ____
 / /___    / /  / /_/ /  / ____/  / ____/ / /_/ /
 \____/   /_/   \__,_/  /_/      /_/      \____/ 
                                                 
-CiaPPo～(∠・ω< )⌒☆ v1.0.0""")
+CiaPPo～(∠・ω< )⌒☆ v1.0.1""")
 
 while True:
     loginType = questionary.select(
@@ -216,10 +216,23 @@ while True:
                 "ticketTypeId": ticketTypeId,
                 "timeStamp": timestamp,
             },
+            timeout=1,
         ).json()
         logger.debug(resp)
         if resp["isSuccess"]:
             logger.success("Success")
+            session.post(
+              f"https://report.rakuyoudesu.com/report",
+              json={
+                  "count": count,
+                  "purchaserIds": purchaserIds,
+                  "ticketTypeId": ticketTypeId,
+                  "eventMainId": eventMainId
+              },
+              timeout=1,
+            )
+            logger.success("Order success, you can close the window safely.")
+            time.sleep(100000)
             break
         else:
             logger.info(f"Failed, {resp['message']}")
