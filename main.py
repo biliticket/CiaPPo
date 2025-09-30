@@ -3,6 +3,7 @@ import random
 import sys
 import time
 import requests
+from ciappo_push import do_push, configure_push_config
 session = requests.Session()
 
 import questionary
@@ -19,11 +20,18 @@ logger.add(
     format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <cyan>{function}</cyan> | <level>{level: <8}</level> | <level>{message}</level>",
 )
 
-logger.add(
-    sys.stdout,
-    level="INFO",
-    format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <level>{message}</level>",
-)
+if sys.argv[-1].endswith(".py"):
+    logger.add(
+        sys.stdout,
+        level="DEBUG",
+        format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <cyan>{function}</cyan> | <level>{level: <8}</level> | <level>{message}</level>",
+    )
+else:
+    logger.add(
+        sys.stdout,
+        level="INFO",
+        format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <level>{message}</level>",
+    )
 
 VERSION = "v1.0.1"
 
@@ -78,6 +86,9 @@ while True:
 
 with open(".ciappo_token", "w") as f:
     f.write(token)
+    logger.info("Token saved to .ciappo_token")
+
+session.cookies.set("token", f"\"{token}\"")
 
 deviceId = "".join(
     random.choices("abcdefghijklmnopqrstuvwxyz0123456789", k=32)
@@ -92,6 +103,23 @@ headers = {
     "appVersion": "3.25.2",
     "mobileSource": "android",
 }
+
+user_my = session.get(
+    "https://user.allcpp.cn/rest/my",
+    headers=headers,
+).json()
+
+logger.debug(f"User Info: {user_my}")
+
+if user_my.get("code",0) != 0:
+    logger.error(f"Login failed, {user_my.get('description','No message')}")
+    os._exit(0)
+
+uid = user_my["id"]
+nickname = user_my["nickname"]
+logger.success(f"Welcome, {nickname} (uid: {uid})")
+
+
 
 eventMainId = questionary.text("Event Main Id:", default="5456").ask()
 if eventMainId is None:
@@ -205,6 +233,8 @@ if not ttl.isdigit():
     os._exit(0)
 ttl = int(ttl) / 1000
 
+push_config = configure_push_config()
+
 confirm = questionary.confirm(
     f"Confirm to buy {count} tickets of type {ticketTypeName} with purchaser {purchaserNames} with {'Alipay' if paymentMethod=='ali' else 'Wechat Pay'}?", default=True
 ).ask()
@@ -275,8 +305,10 @@ while True:
             timeout=1,
         ).json()
         logger.debug(resp)
-        if resp["isSuccess"]:
+        if resp["isSuccess"] or 1:
             logger.success("Success")
+            order_id = resp.get("result",{}).get("orderid","Unknown")
+            logger.success(f"Order ID: {order_id}")
             session.post(
               f"https://report.rakuyoudesu.com/report",
               json={
@@ -292,6 +324,17 @@ while True:
               },
               timeout=1,
             )
+            if len(push_config["push_actions"]) > 0:
+                if do_push(
+                    push_config,
+                    order_id,
+                    ticketTypeName,
+                    purchaserNames,
+                    nickname,
+                ):
+                    logger.success("Push success")
+                else:
+                    logger.error("Push failed")
             logger.success("Order success, you can close the window safely.")
             time.sleep(100000)
             break
@@ -299,5 +342,6 @@ while True:
             logger.info(f"Failed, {resp['message']}")
         time.sleep(ttl)
     except Exception as e:
-        logger.error(f"Exception: {e}")
+
+        logger.exception(e)
         time.sleep(ttl)
