@@ -1,5 +1,6 @@
 import os
 import random
+import sys
 import time
 import requests
 session = requests.Session()
@@ -7,6 +8,22 @@ session = requests.Session()
 import questionary
 # import sentry_sdk
 from loguru import logger
+
+logger.remove()
+if not os.path.exists("ciappo_logs"):
+    os.makedirs("ciappo_logs")
+
+logger.add(
+    "ciappo_logs/CiaPPo_{time:YYYY-MM-DD_HH-mm-ss}.log",
+    level="DEBUG",
+    format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <cyan>{function}</cyan> | <level>{level: <8}</level> | <level>{message}</level>",
+)
+
+logger.add(
+    sys.stdout,
+    level="INFO",
+    format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <level>{message}</level>",
+)
 
 VERSION = "v1.0.1"
 
@@ -19,12 +36,15 @@ print(r"""   ______    _             ____     ____
 CiaPPo～(∠・ω< )⌒☆ """+VERSION)
 
 while True:
-    loginType = questionary.select(
-        "Login Type:",
-        choices=[
+    choices = [
             "1. Phone + Password",
             "2. Token",
-        ],
+        ]
+    if os.path.exists(".ciappo_token"):
+        choices.append("3. Use saved token")
+    loginType = questionary.select(
+        "Login Type:",
+        choices=choices,
     ).ask()
     if loginType is None:
         logger.error("Login type is None")
@@ -32,6 +52,11 @@ while True:
     if loginType.startswith("2"):
         token = questionary.text("Token:").ask()
         logger.info(f"Using token: {token}")
+        break
+    elif loginType.startswith("3"):
+        with open(".ciappo_token", "r") as f:
+            token = f.read().strip()
+        logger.info(f"Using saved token: {token}")
         break
     username = questionary.text("Phone:").ask()
     password = questionary.password("Password:").ask()
@@ -50,6 +75,9 @@ while True:
         token = resp["token"]
         logger.info(f"Login successful, token: {token}")
         break
+
+with open(".ciappo_token", "w") as f:
+    f.write(token)
 
 deviceId = "".join(
     random.choices("abcdefghijklmnopqrstuvwxyz0123456789", k=32)
@@ -109,6 +137,17 @@ if ticketType is None:
 
 ticketTypeId = ticketType["id"]
 ticketTypeName = ticketType["ticketName"]
+sellStartTime = ticketType["sellStartTime"]
+
+startTimeTune = questionary.text(
+    f"Start Time Tune (in miliseconds, default: 0):",
+    default="0",
+    validate=lambda text: text.isdigit() or "Must be a number",
+).ask()
+
+sellStartTime = int(sellStartTime) + int(startTimeTune)
+
+logger.info(f"Ticket Sell Start Time: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(sellStartTime/1000))} (timestamp: {sellStartTime})")
 
 logger.info(f"Selected Ticket Type: {ticketTypeId} {ticketTypeName}")
 
@@ -172,6 +211,20 @@ confirm = questionary.confirm(
 if not confirm:
     logger.info("Canceled")
     os._exit(0)
+
+logger.info("Waiting for sell start time...")
+
+import time
+if sellStartTime < int(time.time() * 1000):
+    logger.info("Sell start time passed, continue...")
+else:
+    while True:
+        now = int(time.time() * 1000)
+        if now >= sellStartTime:
+            break
+        time.sleep(1)
+        logger.info(f"Waiting for {sellStartTime - now}ms...")
+    logger.info("Sell start time reached, continue...")
 
 while True:
     try:
