@@ -174,7 +174,7 @@ def do_push(
             if not push_gotify(
                 push_config["gotify"]["server"],
                 push_config["gotify"]["token"],
-                f"【CiaPPo】锁票成功，尽快支付，点击跳转\n票名: {ticket_name}\n购票人: {buyer_name}\n用户: {username}\n订单ID: {order_id}"
+                f"【CiaPPo】锁票成功，尽快支付。\n票名: {ticket_name}\n购票人: {buyer_name}\n用户: {username}\n订单ID: {order_id}"
             ):
                 success = False
         elif push_type == "ob11":
@@ -190,7 +190,7 @@ def do_push(
             if not push_bark(
                 push_config["bark"]["server"],
                 push_config["bark"]["key"],
-                f"【CiaPPo】锁票成功，尽快支付，点击跳转\n票名: {ticket_name}\n购票人: {buyer_name}\n用户: {username}\n订单ID: {order_id}",
+                f"【CiaPPo】锁票成功，尽快支付。\n票名: {ticket_name}\n购票人: {buyer_name}\n用户: {username}\n订单ID: {order_id}",
                 push_config["bark"]["enhanced"],
             ):
                 success = False
