@@ -343,7 +343,7 @@ while True:
             timeout=1,
         ).json()
         logger.debug(resp)
-        if resp["isSuccess"] or 1:
+        if resp["isSuccess"]:
             logger.success("Success")
             order_id = resp.get("result",{}).get("orderid","Unknown")
             logger.success(f"Order ID: {order_id}")
