@@ -68,9 +68,10 @@ while True:
     choices = [
             "1. Phone + Password",
             "2. Token",
+            "3. Phone + Verify Code",
         ]
     if os.path.exists(".ciappo_token"):
-        choices.append("3. Use saved token")
+        choices.append("4. Use saved token")
     loginType = questionary.select(
         "Login Type:",
         choices=choices,
@@ -82,18 +83,37 @@ while True:
         token = questionary.text("Token:").ask()
         logger.info(f"Using token: {token}")
         break
-    elif loginType.startswith("3"):
+    elif loginType.startswith("4"):
         with open(".ciappo_token", "r") as f:
             token = f.read().strip()
         logger.info(f"Using saved token: {token}")
         break
-    username = questionary.text("Phone:").ask()
-    password = questionary.password("Password:").ask()
+    elif loginType.startswith("3"):
+        country = questionary.text("Country Code (Default +86):", default="86").ask()
+        username = questionary.text("Phone:").ask()
+        resp = session.get(
+            f"https://user.allcpp.cn/api/code/phone?country={country}&phone={username}"
+        )
+        if resp.status_code == 200 and "SUCCESS:提交成功！" in resp.text:
+            logger.info("Sent verify code successfully.")
+        else:
+            logger.warning("Failed to send verify code.")
+            continue
+        code = questionary.text("Verify Code:").ask()
+        
+        resp = session.post(
+            f"https://user.allcpp.cn/api/login/phone/code?country={country}&phone={username}&phoneCode={code}",
+            data={},
+        ).json()
+    else:
+        username = questionary.text("Phone:").ask()
+        password = questionary.password("Password:").ask()
 
-    resp = session.post(
-        "https://user.allcpp.cn/api/login/normal",
-        data={"account": username, "password": password},
-    ).json()
+        resp = session.post(
+            "https://user.allcpp.cn/api/login/normal",
+            data={"account": username, "password": password},
+        ).json()
+        
     logger.debug(resp)
     if resp.get("isSuccess", True) is False:
         logger.error(f"Login failed, {resp.get('message','No message')}")
